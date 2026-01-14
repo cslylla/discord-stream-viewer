@@ -4,7 +4,7 @@
 **Discord Stream Viewer** is a small real-time web application that reads messages from a Discord channel to a browser-based frontend.
 It was built as part of a technical interview exercise to demonstrate backend–frontend integration, real-time communication, and deployment on Railway.
 
-The system consists of a Discord bot, a lightweight Python backend, and a minimal web UI.
+The system consists of a Discord bot, a lightweight Python backend, and a minimal web UI. Deployed on **Railway** as a single service using Procfile + runtime env vars.
 
 ## How It Works
 	1.	A Discord bot listens for new messages in a configured Discord channel.
