@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discord Stream Viewer</title>
+  <style>
+    :root { --accent:#ffd400; --bg:#0b0c10; --card:#11131a; --text:#eaecef; --muted:#9aa4b2; }
+    body { margin:0; font-family:system-ui; background:var(--bg); color:var(--text); }
+    header { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; gap:12px; align-items:center; }
+    .dot { width:10px; height:10px; border-radius:50%; background:#666; }
+    .dot.on { background:var(--accent); }
+    main { max-width:900px; margin:auto; padding:20px; }
+    .card { background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; }
+    ul { list-style:none; padding:0; margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+    li { padding:10px; border:1px solid rgba(255,255,255,.08); border-radius:10px; }
+    .author { color:var(--accent); font-weight:600; }
+    .meta { color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+<header>
+  <div id="dot" class="dot"></div>
+  <div>
+    <strong>Discord Stream Viewer</strong>
+    <div class="meta" id="status">Connecting…</div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <ul id="list"></ul>
+  </div>
+</main>
+
+<script>
+  const list = document.getElementById("list");
+  const dot = document.getElementById("dot");
+  const status = document.getElementById("status");
+
+  const es = new EventSource("/events");
+
+  es.addEventListener("status", () => {
+    dot.classList.add("on");
+    status.textContent = "Connected";
+  });
+
+  es.addEventListener("message", (e) => {
+    const m = JSON.parse(e.data);
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="meta"><span class="author">${m.author}</span> · ${m.ts}</div><div>${m.content}</div>`;
+    list.prepend(li);
+  });
+
+  es.onerror = () => {
+    dot.classList.remove("on");
+    status.textContent = "Disconnected (retrying…)";
+  };
+</script>
+</body>
+</html>
