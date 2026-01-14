@@ -147,3 +147,7 @@ async def start_discord_bot():
 
     # Run discord client in background on the same event loop
     asyncio.create_task(client.start(DISCORD_TOKEN))
+
+@app.get("/health")
+async def health():
+    return {"ok": True}
