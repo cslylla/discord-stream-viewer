@@ -4,12 +4,22 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Set
+import ssl
+import aiohttp
+import certifi
 
 import discord
 from discord import Intents
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+# SSL cert
+try:
+    import certifi
+    os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+except Exception:
+    pass
 
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -91,8 +101,16 @@ intents.message_content = True
 intents.guilds = True
 intents.messages = True
 
-client = discord.Client(intents=intents)
+INSECURE_SSL = os.getenv("DISCORD_INSECURE_SSL", "").lower() in ("1", "true", "yes")
 
+if INSECURE_SSL:
+    # Dev-only fallback; do NOT use in production
+    connector = aiohttp.TCPConnector(ssl=False)
+else:
+    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+    connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+
+client = discord.Client(intents=intents, connector=connector)
 
 @client.event
 async def on_ready():
