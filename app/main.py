@@ -7,7 +7,8 @@ from typing import Set
 import ssl
 import aiohttp
 import certifi
-
+from collections import deque
+from typing import Deque, List
 import discord
 from discord import Intents
 from fastapi import FastAPI, Request
@@ -33,6 +34,8 @@ app = FastAPI(title="Discord Stream Viewer")
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+HISTORY_SIZE = 10
+history: Deque[dict] = deque(maxlen=HISTORY_SIZE)
 
 class Broadcaster:
     def __init__(self) -> None:
@@ -115,10 +118,35 @@ client = discord.Client(intents=intents, connector=connector)
 @client.event
 async def on_ready():
     print(f"[discord] Logged in as {client.user} (id={client.user.id})")
-    if DISCORD_CHANNEL_ID:
-        print(f"[discord] Watching channel id={DISCORD_CHANNEL_ID}")
-    else:
+
+    if not DISCORD_CHANNEL_ID:
         print("[discord] DISCORD_CHANNEL_ID not set")
+        return
+
+    channel = client.get_channel(DISCORD_CHANNEL_ID)
+    if channel is None:
+        print(f"[discord] Could not find channel id={DISCORD_CHANNEL_ID}")
+        return
+
+    print(f"[discord] Watching channel id={DISCORD_CHANNEL_ID}. Loading last {HISTORY_SIZE} messages…")
+
+    # Fetch last 10 messages from Discord
+    try:
+        messages = [m async for m in channel.history(limit=HISTORY_SIZE)]
+        # Discord returns newest -> oldest; we want oldest -> newest in the buffer
+        messages.reverse()
+
+        history.clear()
+        for m in messages:
+            history.append({
+                "author": m.author.display_name,
+                "content": m.content,
+                "ts": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            })
+
+        print(f"[discord] Loaded {len(history)} messages into history")
+    except Exception as e:
+        print(f"[discord] Failed to load history: {e}")
 
 
 @client.event
@@ -136,6 +164,7 @@ async def on_message(message: discord.Message):
         "content": message.content,
         "ts": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
+    history.append(payload)
     await broadcaster.publish(payload)
 
 
@@ -147,6 +176,11 @@ async def start_discord_bot():
 
     # Run discord client in background on the same event loop
     asyncio.create_task(client.start(DISCORD_TOKEN))
+
+@app.get("/history", response_class=JSONResponse)
+async def get_history() -> list[dict]:
+    # return oldest -> newest so UI can prepend in-order and end up newest-on-top
+    return list(history)
 
 @app.get("/health")
 async def health():

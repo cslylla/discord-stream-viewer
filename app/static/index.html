@@ -241,53 +241,74 @@
   </footer>
 
   <script>
-    const list = document.getElementById("list");
-    const dot = document.getElementById("dot");
-    const status = document.getElementById("status");
-    const countEl = document.getElementById("count");
-    const substatus = document.getElementById("substatus");
-    const empty = document.getElementById("empty");
+  const list = document.getElementById("list");
+  const dot = document.getElementById("dot");
+  const status = document.getElementById("status");
+  const countEl = document.getElementById("count");
+  const substatus = document.getElementById("substatus");
+  const empty = document.getElementById("empty");
 
-    let count = 0;
+  let count = 0;
 
-    const es = new EventSource("/events");
+  function renderMessage(m) {
+    if (empty) empty.style.display = "none";
 
-    es.addEventListener("status", () => {
-      dot.classList.add("on");
-      status.textContent = "Connected";
-      substatus.textContent = "Listening for new messages…";
-    });
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="meta"><span class="author">${escapeHtml(m.author)}</span> · ${escapeHtml(m.ts)}</div>
+      <div class="content">${escapeHtml(m.content)}</div>
+    `;
 
-    es.addEventListener("message", (e) => {
-      const m = JSON.parse(e.data);
+    // newest on top
+    list.prepend(li);
+    count++;
+    if (countEl) countEl.textContent = String(count);
+  }
 
-      // Hide empty state once the first message arrives
-      if (empty) empty.style.display = "none";
+  async function loadHistory() {
+    try {
+      const res = await fetch("/history");
+      if (!res.ok) return;
+      const msgs = await res.json();
 
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div class="meta"><span class="author">${escapeHtml(m.author)}</span> · ${escapeHtml(m.ts)}</div>
-        <div class="content">${escapeHtml(m.content)}</div>
-      `;
-
-      list.prepend(li);
-      count++;
-      countEl.textContent = String(count);
-      substatus.textContent = "Streaming…";
-    });
-
-    es.onerror = () => {
-      dot.classList.remove("on");
-      status.textContent = "Disconnected (retrying…)";
-      substatus.textContent = "Reconnecting…";
-    };
-
-    // Basic HTML escaping to avoid injection when rendering message content
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, (m) => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
-      }[m]));
+      if (Array.isArray(msgs) && msgs.length > 0) {
+        // msgs is oldest -> newest; prepend in-order => newest ends up on top
+        for (const m of msgs) renderMessage(m);
+        if (substatus) substatus.textContent = "Loaded recent messages. Listening…";
+      }
+    } catch (e) {
+      // ignore
     }
-  </script>
+  }
+
+  // load history first (does not block SSE)
+  loadHistory();
+
+  const es = new EventSource("/events");
+
+  es.addEventListener("status", () => {
+    dot.classList.add("on");
+    status.textContent = "Connected";
+    if (substatus) substatus.textContent = "Listening for new messages…";
+  });
+
+  es.addEventListener("message", (e) => {
+    const m = JSON.parse(e.data);
+    renderMessage(m);
+    if (substatus) substatus.textContent = "Streaming…";
+  });
+
+  es.onerror = () => {
+    dot.classList.remove("on");
+    status.textContent = "Disconnected (retrying…)";
+    if (substatus) substatus.textContent = "Reconnecting…";
+  };
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[m]));
+  }
+</script>
 </body>
 </html>
