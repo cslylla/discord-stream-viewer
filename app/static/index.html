@@ -187,7 +187,6 @@
 <body>
   <header>
     <div class="brand">
-      <!-- Uses the favicon as a simple logo for visual consistency -->
       <img class="logo" src="/static/favicon.ico" alt="Logo" />
 
       <div class="titleWrap">
@@ -277,7 +276,9 @@
         if (substatus) substatus.textContent = "Loaded recent messages. Listening…";
       }
     } catch (e) {
-      // ignore
+      if (substatus) {
+        substatus.textContent = "Unable to load recent messages. Waiting for live updates…";
+      }
     }
   }
 
