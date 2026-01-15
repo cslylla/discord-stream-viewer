@@ -4,59 +4,290 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Discord Stream Viewer</title>
-  <style>
-    :root { --accent:#ffd400; --bg:#0b0c10; --card:#11131a; --text:#eaecef; --muted:#9aa4b2; }
-    body { margin:0; font-family:system-ui; background:var(--bg); color:var(--text); }
-    header { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; gap:12px; align-items:center; }
-    .dot { width:10px; height:10px; border-radius:50%; background:#666; }
-    .dot.on { background:var(--accent); }
-    main { max-width:900px; margin:auto; padding:20px; }
-    .card { background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; }
-    ul { list-style:none; padding:0; margin-top:12px; display:flex; flex-direction:column; gap:10px; }
-    li { padding:10px; border:1px solid rgba(255,255,255,.08); border-radius:10px; }
-    .author { color:var(--accent); font-weight:600; }
-    .meta { color:var(--muted); font-size:12px; }
-  </style>
+
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+
+  <style>
+    :root {
+      --accent:#ffd400;
+      --bg:#0b0c10;
+      --card:#11131a;
+      --text:#eaecef;
+      --muted:#9aa4b2;
+      --border: rgba(255,255,255,.10);
+      --borderSoft: rgba(255,255,255,.08);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--borderSoft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      box-shadow: 0 0 0 1px var(--borderSoft);
+      background: rgba(255,255,255,.03);
+      flex: 0 0 auto;
+    }
+
+    .titleWrap { min-width: 0; }
+    .title {
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #666;
+      box-shadow: 0 0 0 4px rgba(255,212,0,.10);
+    }
+    .dot.on { background: var(--accent); }
+
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 22px 20px 30px;
+    }
+
+    .intro {
+      margin-bottom: 14px;
+    }
+
+    .intro h1 {
+      font-size: 22px;
+      margin: 0 0 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .intro p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 70ch;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--borderSoft);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .cardHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .cardHeader strong {
+      font-weight: 750;
+    }
+
+    .count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    li {
+      padding: 10px 12px;
+      border: 1px solid var(--borderSoft);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .author {
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    .content {
+      margin-top: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty {
+      padding: 14px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,.02);
+    }
+
+    footer {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 18px 20px 28px;
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--borderSoft);
+    }
+
+    .footerInner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+  </style>
 </head>
+
 <body>
-<header>
-  <div id="dot" class="dot"></div>
-  <div>
-    <strong>Discord Stream Viewer</strong>
-    <div class="meta" id="status">Connecting…</div>
-  </div>
-</header>
+  <header>
+    <div class="brand">
+      <!-- Uses the favicon as a simple logo for visual consistency -->
+      <img class="logo" src="/static/favicon.ico" alt="Logo" />
 
-<main>
-  <div class="card">
-    <ul id="list"></ul>
-  </div>
-</main>
+      <div class="titleWrap">
+        <p class="title">Discord Stream Viewer</p>
+        <div class="meta">
+          <span id="dot" class="dot" aria-hidden="true"></span>
+          <span id="status">Connecting…</span>
+        </div>
+      </div>
+    </div>
 
-<script>
-  const list = document.getElementById("list");
-  const dot = document.getElementById("dot");
-  const status = document.getElementById("status");
+    <div class="meta" title="Number of messages shown">
+      <span id="count">0</span> msgs
+    </div>
+  </header>
 
-  const es = new EventSource("/events");
+  <main>
+    <section class="intro">
+      <h1>Live Discord messages</h1>
+      <p>
+        This page streams new messages from a configured Discord channel in real time.
+        Post a message in the test channel and it will appear here automatically.
+      </p>
+    </section>
 
-  es.addEventListener("status", () => {
-    dot.classList.add("on");
-    status.textContent = "Connected";
-  });
+    <div class="card">
+      <div class="cardHeader">
+        <strong>Message feed</strong>
+        <span class="count" id="substatus">Waiting for messages…</span>
+      </div>
 
-  es.addEventListener("message", (e) => {
-    const m = JSON.parse(e.data);
-    const li = document.createElement("li");
-    li.innerHTML = `<div class="meta"><span class="author">${m.author}</span> · ${m.ts}</div><div>${m.content}</div>`;
-    list.prepend(li);
-  });
+      <div id="empty" class="empty">
+        No messages yet. Send a message in Discord to see it appear here.
+      </div>
 
-  es.onerror = () => {
-    dot.classList.remove("on");
-    status.textContent = "Disconnected (retrying…)";
-  };
-</script>
+      <ul id="list" aria-live="polite" aria-relevant="additions"></ul>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footerInner">
+      <div>
+        coded by <a href="https://github.com/cslylla" target="_blank" rel="noreferrer noopener"
+            class="linkedin" title="Go to GitHub profile">cslylla</a>
+      </div>
+      <div>
+        SSE stream · FastAPI · <a href="https://railway.com/" target="_blank" rel="noreferrer noopener"
+            class="linkedin" title="Go to Railway">Railway</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const list = document.getElementById("list");
+    const dot = document.getElementById("dot");
+    const status = document.getElementById("status");
+    const countEl = document.getElementById("count");
+    const substatus = document.getElementById("substatus");
+    const empty = document.getElementById("empty");
+
+    let count = 0;
+
+    const es = new EventSource("/events");
+
+    es.addEventListener("status", () => {
+      dot.classList.add("on");
+      status.textContent = "Connected";
+      substatus.textContent = "Listening for new messages…";
+    });
+
+    es.addEventListener("message", (e) => {
+      const m = JSON.parse(e.data);
+
+      // Hide empty state once the first message arrives
+      if (empty) empty.style.display = "none";
+
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="meta"><span class="author">${escapeHtml(m.author)}</span> · ${escapeHtml(m.ts)}</div>
+        <div class="content">${escapeHtml(m.content)}</div>
+      `;
+
+      list.prepend(li);
+      count++;
+      countEl.textContent = String(count);
+      substatus.textContent = "Streaming…";
+    });
+
+    es.onerror = () => {
+      dot.classList.remove("on");
+      status.textContent = "Disconnected (retrying…)";
+      substatus.textContent = "Reconnecting…";
+    };
+
+    // Basic HTML escaping to avoid injection when rendering message content
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+      }[m]));
+    }
+  </script>
 </body>
 </html>
