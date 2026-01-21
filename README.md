@@ -12,6 +12,14 @@ scoping and trade-offs
 
 The system consists of a Discord bot, a lightweight Python backend, and a minimal web UI, all deployed as a single service.
 
+### Deployment note
+
+The original version of this app was deployed on Railway using the free plan, which expires after 30 days.  
+To keep the project publicly accessible for demonstration purposes, it is now redeployed on Render.
+
+**Current live URL:**  
+https://discord-stream-viewer.onrender.com/
+
 ---
 
 ## How the Solution Works
