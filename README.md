@@ -15,7 +15,7 @@ The system consists of a Discord bot, a lightweight Python backend, and a minima
 ### Deployment note
 
 The original version of this app was deployed on Railway using the free plan, which expires after 30 days.  
-To keep the project publicly accessible for demonstration purposes, it is now redeployed on Render.
+To keep the project publicly accessible for demonstration purposes, it is now redeployed on Render. On the free Render plan, the service may take a few seconds to respond on first load due to cold starts after inactivity.
 
 **Current live URL:**  
 https://discord-stream-viewer.onrender.com/
